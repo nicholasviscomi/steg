@@ -1,0 +1,15 @@
+- Use rust to create a command line tool to encrpyt files into videos via steganography 
+- Run this on files I want to have saved and store on a hard drive
+
+Where will I get the video/pictures to store the data?
+- camera roll. that way this will kill 2 birds with one stone!
+
+How much data can be stored in each one?
+- will probabbly do 2 lsb steganography so I will have to do some quick math on it. I should also
+  search through the camera roll and choose which content to use as the vehicle based on its size. 
+  For example, a small word document should not be encoded into a 2 minute long video, for that would 
+  be a waste of the video
+
+How will different filetypes be handled?
+- store something unique at the beginning denoting the file type. When that is decrypted it can be used to
+  open the correct file
