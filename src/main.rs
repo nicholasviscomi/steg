@@ -8,10 +8,6 @@ macro_rules! print_and_die {
     };
 }
 
-//https://wiki.multimedia.cx/index.php?title=YUV4MPEG2 for video support
-
-const N_LSB: usize = 1;
-
 fn main() {
     let args: Vec<String> = std::env::args().collect();
     let options = parse_args(args);
@@ -29,10 +25,8 @@ fn main() {
         Ok(file) => file,
     };
     let _ = out_file.write_all(&output);
-    
-    if medium.len() < data.len() * 8 / N_LSB {
-        print_and_die!("The medium is not large enough to encode the input file");
-    }
+
+    decode_message(&read_contents(open_file(&String::from("data/output.bmp"))), &String::from("bmp"));
 }
 
 fn get_file_type(s: &String) -> String {
@@ -40,19 +34,42 @@ fn get_file_type(s: &String) -> String {
     if contents.len() == 2 {
         return contents[1].to_string();
     } else {
-        panic!("Could ascertain file type of {}", s);
+        panic!("Could not ascertain file type of {}", s);
     }
 }
 
 // returns the 0-indexed start of the pixel data for a given file type
 // e.x. the important information in the header of a bmp image is in the first 54 bytes.
 //      thus, start encoding at the index 54
-fn file_pixel_offset(file_type: &String) -> u8 {
+fn file_pixel_offset(file_type: &String) -> usize {
     match file_type.as_str() {
         "bmp" => 54, // definitely right
         "png" => 8, // ! untested rn
         _ => panic!("Unknown file type: {}", file_type)
     }
+}
+
+fn update_host_byte(mut host_byte: u8, new_bit: u8) -> u8 {
+    if new_bit != 0 && new_bit != 1 { panic!("New Bit was not 0 or 1"); }
+
+    host_byte = (host_byte >> 1) << 1; // knock off the least significant bit and replace with a 0
+    host_byte |= new_bit; // change ending 0 to a 1 if needed
+
+    return host_byte;
+}
+
+fn decode_message(medium: &Vec<u8>, file_type: &String) {
+    let start = file_pixel_offset(file_type);  
+    let mut msg_len = 0;
+    for i in start..(start + 32) {
+        let bit = medium[i] & 1; // returns whether the LSB is 0 or 1
+        if bit == 1 {
+            msg_len |= bit << (i - start);
+        } // otherwise the bit is already 0 from initialization
+    }
+    println!("\nMSG LEN: {}", msg_len);
+    // let mut curr_byte: u8 = 0;
+    // let mut bit_index = 0;
 }
 
 fn encode_message(msg: &Vec<u8>, medium: &Vec<u8>, file_type: String) -> Vec<u8> {
@@ -61,36 +78,25 @@ fn encode_message(msg: &Vec<u8>, medium: &Vec<u8>, file_type: String) -> Vec<u8>
     let mut output: Vec<u8> = medium.clone(); 
     let start = file_pixel_offset(&file_type);
 
+    // Encode a 32 bit 
+    let len = msg.len() as u32;
+    for i in start..(start + 32) {
+        // println!("{:b}, {}th = {}", len, i - start, (len >> (i - start)) & 1);
+        output[i] = update_host_byte(medium[i], ((len >> (i - start)) & 1) as u8);
+
+        //? seems to be encoding the number correctly
+        println!("{} ({:b}) vs {} ({:b})", medium[i], medium[i], output[i], output[i]);
+    }
+
     // denotes which number bit we are at within the current byte of msg (0 indexed)
-    let mut bit_index = 0; 
+    let mut bit_index: usize = 0;
     // denotes which byte within msg we are at
     let mut byte_index = 0;
-    for i in (start as usize)..medium.len() {
-        let curr_bit = msg[byte_index] & (1 << bit_index); // equals 1 if current bit is 1, otherwise 0
+    for i in (start + 32)..medium.len() {
+        let curr_bit = (msg[byte_index] >> bit_index) & 1; // equals 1 if current bit is 1, otherwise 0
 
-        let mut host_byte = medium[i];
-        if host_byte & 1 == 1 && curr_bit == 0 {
-            // last bit is 1; change it to 0
-            host_byte &= !(1 << 7);
-            /*
-            E.x. 11001001
-               & 11111110 (!(1 << 7))
-               ----------
-                 11001000
-            */
-        } else if host_byte & 1 == 0 && curr_bit == 1 {
-            // last bit is 0; change it to 1
-            host_byte |= 1 << 7;
-            /*
-            E.x. 11001000
-               | 00000001 (1 << 7)
-               ----------
-                 11001001
-            */
-        }
-        // otherwise the last bit in the byte of the image is already set as needed
-        
-        output[i] = host_byte;
+        output[i] = update_host_byte(medium[i], curr_bit);
+
         // increment bit index and overflow if needed
         bit_index += 1;
         if bit_index > 7 {
@@ -140,9 +146,9 @@ fn parse_args(args: Vec<String>) -> Options {
                 "-h" | "--help" => {
                     print_and_die!("Don't be an idiot");
                 },
-                "-i" | "--input" => {
+                "-i" | "--input" | "--decode" => {
                     i += 1; // the next argument should be the path to the input
-                    assert!(i < args.len(), "No path to input file was specified");
+                    assert!(i < args.len(), "No path to file was specified after \"{}\"", &arg);
                     options.path_to_input.push_str(&args[i]);
                 }, 
                 "-m" | "--medium" => {

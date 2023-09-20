@@ -1,0 +1,22 @@
+
+BASIC FUNCTIONALITY
+[x] encode message function
+[ ] encode the msglen in the first 32 bytes of the image 
+    [ ] leave the next ___ bytes blank for the filetype
+[ ] decode message 
+    [ ] get msglen from image
+    [ ] get actual message
+    [ ] display it
+        [ ] allow option for writing it to text file
+
+ADVANCED FUNCTIONALITY
+Other file types (shouldn't be too hard?)
+    [ ] encode whole file
+        [ ] store filetype after the message length
+    [ ] decode whole file and output it
+
+[ ] support encoding into videos (filetype: https://wiki.multimedia.cx/index.php?title=YUV4MPEG2)
+[ ] allow user to input whole directories
+
+[ ] Encrypt the data with a password before putting it in the image
+    [ ] Warn the user that if the password is forgotten, the message is lost
