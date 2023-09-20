@@ -58,8 +58,8 @@ fn update_host_byte(mut host_byte: u8, new_bit: u8) -> u8 {
     return host_byte;
 }
 
-fn decode_message(medium: &Vec<u8>, file_type: &String) {
-    let start = file_pixel_offset(file_type);  
+fn decode_message(medium: &Vec<u8>, file_type: &String) -> Vec<u8> {
+    let mut start = file_pixel_offset(file_type);  
     let mut msg_len = 0;
     for i in start..(start + 32) {
         let bit = medium[i] & 1; // returns whether the LSB is 0 or 1
@@ -68,8 +68,38 @@ fn decode_message(medium: &Vec<u8>, file_type: &String) {
         } // otherwise the bit is already 0 from initialization
     }
     println!("\nMSG LEN: {}", msg_len);
-    // let mut curr_byte: u8 = 0;
-    // let mut bit_index = 0;
+
+    let mut output: Vec<u8> = vec![];
+    start += 32;
+    let mut curr_byte: u8 = !(0 << 7);
+    let mut bit_index: u8 = 0;
+    for i in start..(start + ((msg_len*8) as usize)) {
+        let bit = medium[i] & 1;
+        if bit == 0 {
+            print!("{}, {}: \t", bit, bit_index);
+            print!("{:b} ", curr_byte);
+            curr_byte &= !(1 << bit_index);
+            print!("{:b}\n", curr_byte);
+        }
+
+        bit_index += 1;
+        if bit_index > 7 {
+            bit_index = 0;
+            output.push(curr_byte);
+            curr_byte = !(0 << 7); // ! critical line
+        }
+    }
+    println!();
+    for b in &output {
+        print!("{:b} ", b);
+    }
+    let message = match String::from_utf8(output.clone()) {
+        Ok(v) => v,
+        Err(e) => panic!("Invalid utf8 sequence: {}", e)
+    };
+    println!("\nMESSAGE: {}", message);
+    
+    return output;
 }
 
 fn encode_message(msg: &Vec<u8>, medium: &Vec<u8>, file_type: String) -> Vec<u8> {
@@ -85,7 +115,7 @@ fn encode_message(msg: &Vec<u8>, medium: &Vec<u8>, file_type: String) -> Vec<u8>
         output[i] = update_host_byte(medium[i], ((len >> (i - start)) & 1) as u8);
 
         //? seems to be encoding the number correctly
-        println!("{} ({:b}) vs {} ({:b})", medium[i], medium[i], output[i], output[i]);
+        // println!("{} ({:b}) vs {} ({:b})", medium[i], medium[i], output[i], output[i]);
     }
 
     // denotes which number bit we are at within the current byte of msg (0 indexed)
