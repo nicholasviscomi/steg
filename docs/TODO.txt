@@ -1,11 +1,10 @@
 
 BASIC FUNCTIONALITY
 [x] encode message function
-[ ] encode the msglen in the first 32 bytes of the image 
-    [ ] leave the next ___ bytes blank for the filetype
-[ ] decode message 
-    [ ] get msglen from image
-    [ ] get actual message
+[x] encode the msglen in the first 32 bytes of the image 
+[x] decode message 
+    [x] get msglen from image
+    [x] get actual message
     [ ] display it
         [ ] allow option for writing it to text file
 

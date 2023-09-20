@@ -60,9 +60,9 @@ fn update_host_byte(mut host_byte: u8, new_bit: u8) -> u8 {
 
 fn decode_message(medium: &Vec<u8>, file_type: &String) -> Vec<u8> {
     let mut start = file_pixel_offset(file_type);  
-    let mut msg_len = 0;
+    let mut msg_len: u32 = 0;
     for i in start..(start + 32) {
-        let bit = medium[i] & 1; // returns whether the LSB is 0 or 1
+        let bit: u32 = (medium[i] & 1).into(); // returns whether the LSB is 0 or 1
         if bit == 1 {
             msg_len |= bit << (i - start);
         } // otherwise the bit is already 0 from initialization
@@ -71,33 +71,26 @@ fn decode_message(medium: &Vec<u8>, file_type: &String) -> Vec<u8> {
 
     let mut output: Vec<u8> = vec![];
     start += 32;
-    let mut curr_byte: u8 = !(0 << 7);
+    let mut curr_byte: u8 = 0;
     let mut bit_index: u8 = 0;
     for i in start..(start + ((msg_len*8) as usize)) {
         let bit = medium[i] & 1;
-        if bit == 0 {
-            print!("{}, {}: \t", bit, bit_index);
-            print!("{:b} ", curr_byte);
-            curr_byte &= !(1 << bit_index);
-            print!("{:b}\n", curr_byte);
+        if bit == 1 {
+            curr_byte |= 1 << bit_index;
         }
 
         bit_index += 1;
         if bit_index > 7 {
             bit_index = 0;
             output.push(curr_byte);
-            curr_byte = !(0 << 7); // ! critical line
+            curr_byte = 0; // ! critical line
         }
-    }
-    println!();
-    for b in &output {
-        print!("{:b} ", b);
     }
     let message = match String::from_utf8(output.clone()) {
         Ok(v) => v,
         Err(e) => panic!("Invalid utf8 sequence: {}", e)
     };
-    println!("\nMESSAGE: {}", message);
+    println!("MESSAGE: {}", message);
     
     return output;
 }
